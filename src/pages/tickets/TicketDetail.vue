@@ -1,169 +1,144 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { Send, Paperclip } from 'lucide-vue-next'
+import { ArrowLeft, MessageSquare, History } from 'lucide-vue-next'
 import BadgeStatus from '../../components/common/BadgeStatus.vue'
+import Button from '../../components/common/Button.vue'
 
 const route = useRoute()
-const ticketId = route.params.id // Keeping for future API call use
-
-// Mock data
-const ticket = ref({
-  id: '#ORD-7829',
-  title: 'License upgrade request',
-  status: 'open',
-  priority: 'high',
-  category: 'Billing',
-  created_at: 'Oct 25, 2023 at 10:30 AM',
-  description: 'Hi, I would like to upgrade my current plan to the Professional tier. Can you help me with the pro-rated billing calculation?',
-  user: {
-      name: 'Demo User',
-      avatar: 'U'
-  }
-})
-
-interface TimelineItem {
-    id: number;
-    type: 'message' | 'system';
-    user?: { name: string; role: string; avatar: string };
-    content: string;
-    date: string;
-}
-
-const timeline = ref<TimelineItem[]>([
-  {
-    id: 1,
-    type: 'message',
-    user: { name: 'Demo User', role: 'client', avatar: 'U' },
-    content: 'Hi, I would like to upgrade my current plan to the Professional tier. Can you help me with the pro-rated billing calculation?',
-    date: 'Oct 25, 10:30 AM'
-  },
-  {
-    id: 2,
-    type: 'message',
-    user: { name: 'Support Agent', role: 'agent', avatar: 'S' },
-    content: 'Hello! I can certainly help with that. Our billing system automatically calculates the pro-rated amount based on the remaining days in your cycle. Would you like me to process this now?',
-    date: 'Oct 25, 10:45 AM'
-  },
-  {
-    id: 3,
-    type: 'system',
-    content: 'Status changed from Pending to Open by Support Agent',
-    date: 'Oct 25, 10:46 AM'
-  }
-])
-
+const ticketId = route.params.id
+const ticket = ref<any>(null)
+const isLoading = ref(true)
 const replyContent = ref('')
 
-function handleReply() {
-    if (!replyContent.value.trim()) return
-    
-    timeline.value.push({
-        id: Date.now(),
-        type: 'message',
-        user: { name: 'Demo User', role: 'client', avatar: 'U' },
-        content: replyContent.value,
-        date: 'Just now'
-    })
-    
-    replyContent.value = ''
-    
-    // Auto-scroll logic would go here
+const fetchTicket = async () => {
+  isLoading.value = true
+  try {
+    const response = await fetch(`http://localhost:3001/api/tickets/${ticketId}`)
+    const data = await response.json()
+    ticket.value = data
+  } catch (error) {
+    console.error('Erro ao buscar ticket:', error)
+  } finally {
+    isLoading.value = false
+  }
 }
+
+const updateStatus = async (newStatus: string) => {
+  try {
+    const response = await fetch(`http://localhost:3001/api/tickets/${ticketId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus })
+    })
+    if (response.ok) {
+        await fetchTicket()
+    }
+  } catch (error) {
+    console.error('Erro ao atualizar status:', error)
+  }
+}
+
+onMounted(fetchTicket)
 </script>
 
 <template>
-  <div class="h-[calc(100vh-8rem)] flex flex-col gap-6">
-    <!-- Header -->
-    <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex-shrink-0">
-      <div class="flex flex-col sm:flex-row justify-between gap-4">
-        <div>
-          <div class="flex items-center gap-3 mb-2">
-            <h1 class="text-xl font-bold text-gray-900 dark:text-white">{{ ticket.title }}</h1>
-            <BadgeStatus :status="ticket.status" />
-          </div>
-          <p class="text-sm text-gray-500 flex items-center gap-4">
-             <span>{{ ticket.id }}</span>
-             <span>Created {{ ticket.created_at }}</span>
-             <span class="capitalize">Priority: <span class="font-medium text-gray-700 dark:text-gray-300">{{ ticket.priority }}</span></span>
-          </p>
-        </div>
-        <div>
-             <!-- Actions could go here (Close Ticket, etc) -->
+  <div v-if="isLoading" class="flex items-center justify-center h-64">
+    <div class="animate-spin w-5 h-5 border-2 border-black dark:border-white border-b-transparent rounded-full"></div>
+  </div>
+  
+  <div v-else-if="ticket && ticket.id" class="max-w-4xl mx-auto space-y-12 animate-in fade-in duration-1000">
+    <!-- Navegação de Volta -->
+    <button @click="$router.back()" class="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 hover:text-black dark:hover:text-white transition-colors flex items-center gap-2">
+      <ArrowLeft class="w-3 h-3" /> Voltar à lista
+    </button>
+
+    <!-- Cabeçalho de Título -->
+    <header class="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-gray-100 dark:border-white/5 pb-12">
+      <div class="space-y-4">
+        <h1 class="text-4xl font-black text-gray-900 dark:text-white tracking-tighter">{{ ticket.title }}</h1>
+        <div class="flex items-center gap-3">
+          <BadgeStatus :status="ticket.status" class="scale-90" />
+          <span class="text-[10px] font-mono font-bold text-gray-300">#{{ ticket.id.toString().padStart(4, '0') }}</span>
         </div>
       </div>
-    </div>
+      <div class="text-right flex flex-col items-start md:items-end">
+          <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Prioridade</p>
+          <BadgeStatus :status="ticket.priority" />
+      </div>
+    </header>
 
-    <!-- Timeline & Chat -->
-    <div class="flex-1 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col overflow-hidden">
-        
-        <!-- Messages Area -->
-        <div class="flex-1 overflow-y-auto p-6 space-y-6">
-            <div v-for="item in timeline" :key="item.id">
-                
-                <!-- System Message -->
-                <div v-if="item.type === 'system'" class="flex justify-center my-4">
-                    <span class="text-xs bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-3 py-1 rounded-full">
-                        {{ item.content }} • {{ item.date }}
-                    </span>
-                </div>
+    <!-- Conteúdo do Chamado -->
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-16">
+      <div class="lg:col-span-3 space-y-12">
+        <div class="prose dark:prose-invert max-w-none">
+          <p class="text-lg text-gray-600 dark:text-gray-300 leading-relaxed">
+            {{ ticket.description || 'Sem descrição.' }}
+          </p>
+        </div>
 
-                <!-- User Message -->
-                <div v-else-if="item.user" class="flex gap-4" :class="item.user.role === 'client' ? 'flex-row-reverse' : ''">
-                    <!-- Avatar -->
-                    <div 
-                        class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shadow-sm flex-shrink-0"
-                        :class="item.user.role === 'client' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300'"
-                    >
-                        {{ item.user.avatar }}
-                    </div>
-
-                    <!-- Bubble -->
-                    <div 
-                        class="max-w-2xl rounded-2xl p-4 shadow-sm"
-                        :class="item.user.role === 'client' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-gray-50 dark:bg-gray-700 rounded-tl-none'"
-                    >
-                        <div class="flex items-center justify-between gap-4 mb-1">
-                            <span class="text-xs font-bold" :class="item.user.role === 'client' ? 'text-blue-100' : 'text-gray-900 dark:text-white'">
-                                {{ item.user.name }}
-                            </span>
-                            <span class="text-xs" :class="item.user.role === 'client' ? 'text-blue-200' : 'text-gray-500'">
-                                {{ item.date }}
-                            </span>
-                        </div>
-                        <p class="text-sm whitespace-pre-wrap">{{ item.content }}</p>
-                    </div>
-                </div>
-
+        <!-- Thread Simples -->
+        <div class="pt-12 border-t border-gray-100 dark:border-white/5 space-y-8">
+            <h3 class="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-widest">Histórico do Atendimento</h3>
+            <div class="flex items-center gap-4 py-10 justify-center border border-dashed border-gray-100 dark:border-white/5 rounded-2xl">
+                <MessageSquare class="w-4 h-4 text-gray-300" />
+                <p class="text-xs text-gray-400">Aguardando interação inicial com o suporte...</p>
             </div>
         </div>
 
-        <!-- Reply Box -->
-        <div class="p-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
-            <form @submit.prevent="handleReply" class="relative">
-                <textarea 
-                    v-model="replyContent"
-                    rows="3" 
-                    class="w-full pl-4 pr-12 py-3 border border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white resize-none shadow-sm"
-                    placeholder="Type your reply here..."
-                ></textarea>
-                
-                <div class="absolute bottom-3 right-3 flex items-center gap-2">
-                     <button type="button" class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
-                         <Paperclip class="w-5 h-5" />
-                     </button>
-                     <button 
-                        type="submit" 
-                        :disabled="!replyContent.trim()"
-                        class="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                     >
-                         <Send class="w-5 h-5" />
-                     </button>
-                </div>
-            </form>
+        <!-- Input de Resposta -->
+        <div class="space-y-4">
+            <textarea 
+                v-model="replyContent"
+                placeholder="Escreva sua mensagem aqui..."
+                class="w-full bg-gray-50 dark:bg-white/5 border-none rounded-2xl p-6 text-sm focus:ring-1 focus:ring-black dark:focus:ring-white transition-all resize-none dark:text-white"
+                rows="4"
+            ></textarea>
+            <div class="flex justify-end">
+                <Button variant="primary" class="rounded-xl px-10 bg-black dark:bg-white text-white dark:text-black">Enviar</Button>
+            </div>
         </div>
+      </div>
 
+      <!-- Ações na Direita -->
+      <aside class="space-y-8 text-xs">
+          <div class="space-y-6">
+              <h4 class="font-bold uppercase tracking-widest text-gray-400">Ações</h4>
+              <div class="flex flex-col gap-2">
+                <button 
+                  v-if="ticket.status !== 'closed'"
+                  @click="updateStatus('closed')" 
+                  class="w-full text-left py-2 px-3 hover:bg-red-50 hover:text-red-500 rounded-lg transition-colors font-bold"
+                >
+                  Fechar Chamado
+                </button>
+                <button 
+                  v-if="ticket.status === 'open'"
+                  @click="updateStatus('in_progress')" 
+                  class="w-full text-left py-2 px-3 hover:bg-blue-50 hover:text-blue-500 rounded-lg transition-colors font-bold"
+                >
+                  Em Atendimento
+                </button>
+                <button 
+                  v-if="ticket.status === 'closed' || ticket.status === 'in_progress'"
+                  @click="updateStatus('open')" 
+                  class="w-full text-left py-2 px-3 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors font-bold"
+                >
+                  Reabrir Ticket
+                </button>
+              </div>
+          </div>
+
+          <div class="space-y-2 pt-8 border-t border-gray-100 dark:border-white/5">
+              <h4 class="font-bold uppercase tracking-widest text-gray-400">Log de Data</h4>
+              <p class="text-gray-500">{{ new Date(ticket.created_at).toLocaleString('pt-BR') }}</p>
+          </div>
+      </aside>
     </div>
   </div>
-</template>
 
+  <div v-else class="max-w-4xl mx-auto py-20 text-center">
+    <h3 class="text-xl font-bold text-red-500">Chamado não encontrado.</h3>
+    <Button variant="ghost" class="mt-4" @click="$router.push('/tickets')">Voltar para a lista</Button>
+  </div>
+</template>

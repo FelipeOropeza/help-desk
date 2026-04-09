@@ -1,121 +1,139 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from '../stores/auth.store'
-import { useTenantStore } from '../stores/tenant.store'
 import { 
   LayoutDashboard, 
   Ticket, 
-  Settings, 
   LogOut, 
-  Menu, 
-  X,
-  Bell
+  Menu,
+  Plus
 } from 'lucide-vue-next'
 
 const router = useRouter()
-const authStore = useAuthStore()
-const tenantStore = useTenantStore()
 const isSidebarOpen = ref(false)
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'My Tickets', href: '/tickets', icon: Ticket },
-  { name: 'Settings', href: '/settings', icon: Settings },
+  { name: 'Início', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Chamados', href: '/tickets', icon: Ticket }
 ]
 
-function toggleSidebar() {
-  isSidebarOpen.value = !isSidebarOpen.value
-}
-
 function handleLogout() {
-  authStore.logout()
   router.push('/auth/login')
 }
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-900 flex">
-    <!-- Mobile Sidebar Backdrop -->
-    <div v-if="isSidebarOpen" class="fixed inset-0 bg-gray-900/50 z-40 lg:hidden" @click="isSidebarOpen = false"></div>
+  <div class="h-screen overflow-hidden bg-white dark:bg-[#0A0A0A] flex text-gray-900 dark:text-gray-100 font-sans selection:bg-blue-100">
+    <!-- Mobile Menu Overlay -->
+    <div v-if="isSidebarOpen" class="fixed inset-0 bg-black/10 backdrop-blur-sm z-40 lg:hidden" @click="isSidebarOpen = false"></div>
 
-    <!-- Sidebar -->
+    <!-- Sidebar Minimalista -->
     <aside 
-      class="fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform transition-transform duration-200 ease-in-out lg:transform-none"
-      :class="isSidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+      class="fixed lg:static inset-y-0 left-0 z-50 w-64 bg-gray-50/50 dark:bg-[#111] border-r border-gray-100 dark:border-white/5 transition-transform duration-300 flex flex-col"
+      :class="isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
     >
-      <div class="h-full flex flex-col">
-        <!-- Logo -->
-        <div class="h-16 flex items-center px-6 border-b border-gray-200 dark:border-gray-700">
-          <div class="flex items-center gap-2 font-bold text-xl text-gray-900 dark:text-white">
-            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white text-sm">S</div>
-            <span>{{ tenantStore.tenant.name }}</span>
+      <div class="flex-1 flex flex-col p-8 overflow-hidden">
+        <!-- Logo Simples -->
+        <div class="flex items-center gap-3 mb-12 shrink-0">
+          <div class="w-8 h-8 bg-black dark:bg-white rounded-lg flex items-center justify-center text-white dark:text-black">
+            <Ticket class="w-4 h-4" />
           </div>
-          <button class="ml-auto lg:hidden text-gray-500" @click="isSidebarOpen = false">
-            <X class="w-6 h-6" />
-          </button>
+          <span class="font-bold text-lg tracking-tight">Suporte</span>
         </div>
 
-        <!-- Navigation -->
-        <nav class="flex-1 px-4 py-6 space-y-1">
+        <!-- Links de Navegação -->
+        <nav class="flex-1 space-y-1 overflow-y-auto no-scrollbar">
           <router-link 
             v-for="item in navigation" 
             :key="item.name" 
             :to="item.href"
             class="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors"
+            @click="isSidebarOpen = false"
             :class="[
-              $route.path.startsWith(item.href) 
-                ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400' 
-                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+              $route.path === item.href 
+                ? 'text-gray-900 bg-gray-100 dark:text-white dark:bg-white/10' 
+                : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
             ]"
           >
-            <component :is="item.icon" class="w-5 h-5" />
+            <component :is="item.icon" class="w-4 h-4" />
             {{ item.name }}
           </router-link>
         </nav>
 
-        <!-- User Profile / Logout -->
-        <div class="p-4 border-t border-gray-200 dark:border-gray-700">
-          <div class="flex items-center gap-3 mb-4 px-2">
-            <div class="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 font-bold">
-              U
+        <!-- Ações do Rodapé -->
+        <div class="mt-auto shrink-0 space-y-8 pt-8">
+            <!-- Botão Novo Chamado -->
+            <div class="border-t border-gray-100 dark:border-white/5 pt-8">
+                <button 
+                    @click="$router.push('/tickets/new'); isSidebarOpen = false"
+                    class="w-full flex items-center justify-center gap-2 py-3 bg-black dark:bg-white text-white dark:text-black rounded-xl text-xs font-bold hover:opacity-90 transition-opacity"
+                >
+                    <Plus class="w-3 h-3" />
+                    Novo Registro
+                </button>
             </div>
-            <div class="flex-1 min-w-0">
-              <p class="text-sm font-medium text-gray-900 dark:text-white truncate">User Name</p>
-              <p class="text-xs text-gray-500 truncate">user@example.com</p>
+
+            <!-- Perfil/Sair -->
+            <div>
+              <button 
+                @click="handleLogout"
+                class="flex items-center gap-3 text-xs font-medium text-gray-400 hover:text-red-500 transition-colors"
+              >
+                <LogOut class="w-4 h-4" />
+                Sair da conta
+              </button>
             </div>
-          </div>
-          <button 
-            @click="handleLogout"
-            class="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30 rounded-lg transition-colors"
-          >
-            <LogOut class="w-4 h-4" />
-            Logout
-          </button>
         </div>
       </div>
     </aside>
 
-    <!-- Main Content -->
-    <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
-      <!-- Top Header -->
-      <header class="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 lg:px-8">
-        <button class="lg:hidden p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg" @click="toggleSidebar">
-          <Menu class="w-6 h-6" />
+    <!-- Conteúdo Principal -->
+    <div class="flex-1 flex flex-col min-w-0 h-screen">
+      <!-- Header Super Limpo -->
+      <header class="h-16 shrink-0 flex items-center justify-between px-8 border-b border-gray-100 dark:border-white/5 bg-white/50 dark:bg-black/50 backdrop-blur-xl z-30">
+        <button class="lg:hidden p-2 text-gray-500" @click="isSidebarOpen = true">
+          <Menu class="w-5 h-5" />
         </button>
         
-        <div class="flex items-center gap-4 ml-auto">
-             <button class="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg relative">
-                 <Bell class="w-5 h-5" />
-                 <span class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full"></span>
-             </button>
+        <div class="hidden md:block">
+            <span class="text-xs font-medium text-gray-400">Suporte técnico • Central de Ajuda</span>
+        </div>
+
+        <div class="flex items-center gap-4">
+             <div class="flex flex-col items-end mr-2">
+                 <p class="text-[11px] font-bold">Felipe Oropeza</p>
+                 <p class="text-[9px] text-gray-400">Admin</p>
+             </div>
+             <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-white/10 overflow-hidden">
+                 <img src="https://ui-avatars.com/api/?name=Felipe+Oropeza&background=random" alt="Avatar">
+             </div>
         </div>
       </header>
 
-      <!-- Page Content -->
-      <main class="flex-1 overflow-auto p-4 lg:p-8">
-        <router-view />
+      <!-- Main Section -->
+      <main class="flex-1 overflow-y-auto overflow-x-hidden p-8 lg:p-12 relative flex flex-col">
+        <router-view v-slot="{ Component }">
+          <transition 
+            enter-active-class="transition duration-300 ease-out" 
+            enter-from-class="opacity-0 absolute w-full" 
+            enter-to-class="opacity-100 relative"
+            mode="out-in"
+          >
+            <component :is="Component" :key="$route.path" />
+          </transition>
+        </router-view>
       </main>
     </div>
   </div>
 </template>
+
+<style scoped>
+/* Oculta o scrollbar mas mantém a funcionalidade caso precisem rolar no futuro */
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+</style>

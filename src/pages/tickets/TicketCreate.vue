@@ -1,134 +1,126 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Upload, X } from 'lucide-vue-next'
+import { ArrowLeft } from 'lucide-vue-next'
 import Button from '../../components/common/Button.vue'
 
 const router = useRouter()
 const isLoading = ref(false)
 
 const form = ref({
-  subject: '',
-  category: '',
+  title: '',
   priority: 'medium',
-  description: '',
-  files: [] as File[]
+  description: ''
 })
 
-const categories = ['Billing', 'Technical Support', 'Feature Request', 'Access/Login', 'Other']
-const priorities = ['low', 'medium', 'high', 'critical']
-
-function handleFileChange(event: Event) {
-  const target = event.target as HTMLInputElement
-  if (target.files) {
-    form.value.files = [...form.value.files, ...Array.from(target.files)]
-  }
-}
-
-function removeFile(index: number) {
-  form.value.files.splice(index, 1)
-}
+const priorities = [
+  { value: 'low', label: 'BAIXA' },
+  { value: 'medium', label: 'MÉDIA' },
+  { value: 'high', label: 'ALTA' }
+]
 
 async function handleSubmit() {
+  if (!form.value.title || !form.value.description) return
+  
   isLoading.value = true
-  // Mock API call
-  await new Promise(resolve => setTimeout(resolve, 1000))
-  router.push('/tickets')
+  try {
+    const response = await fetch('http://localhost:3001/api/tickets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(form.value)
+    })
+    
+    if (response.ok) {
+      router.push('/tickets')
+    }
+  } catch (error) {
+    console.error('Erro ao criar ticket:', error)
+  } finally {
+    isLoading.value = false
+  }
 }
 </script>
 
 <template>
-  <div class="max-w-3xl mx-auto">
-    <div class="mb-6">
-      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Create New Order</h1>
-      <p class="text-sm text-gray-500">Submit a new request and we'll get back to you asap.</p>
+  <div class="max-w-6xl mx-auto py-12 px-6 animate-in fade-in duration-1000">
+    <!-- Voltar -->
+    <button 
+      @click="$router.back()" 
+      class="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-400 hover:text-black dark:hover:text-white transition-colors flex items-center gap-3 mb-12"
+    >
+      <ArrowLeft class="w-3 h-3" /> Voltar à lista
+    </button>
+
+    <!-- Cabeçalho -->
+    <div class="mb-12">
+      <h1 class="text-3xl font-black text-gray-900 dark:text-white tracking-tighter mb-2">Novo Registro</h1>
+      <p class="text-gray-400 text-base">Preencha os dados abaixo para relatar um novo problema.</p>
     </div>
 
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-      <form @submit.prevent="handleSubmit" class="space-y-6">
-        <!-- Subject -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Subject</label>
-          <input 
-            v-model="form.subject"
-            type="text" 
-            required
-            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-            placeholder="Brief summary of your issue"
-          >
-        </div>
+    <!-- Formulário Limpo -->
+    <form @submit.prevent="handleSubmit" class="space-y-12">
+      
+      <!-- Título -->
+      <div class="space-y-4">
+        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest">O que está acontecendo?</label>
+        <input 
+          v-model="form.title"
+          type="text" 
+          required
+          class="w-full border-b border-gray-100 dark:border-white/10 bg-transparent py-3 text-xl font-bold focus:outline-none focus:border-black dark:focus:border-white transition-colors placeholder:text-gray-200 dark:placeholder:text-gray-900 tracking-tight"
+          placeholder="Título do problema..."
+        >
+      </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <!-- Category -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
-            <select 
-              v-model="form.category"
-              required
-              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-            >
-              <option value="" disabled selected>Select a category</option>
-              <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
-            </select>
-          </div>
-
-          <!-- Priority -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Priority</label>
-            <select 
-              v-model="form.priority"
-              required
-              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white capitalize"
-            >
-              <option v-for="p in priorities" :key="p" :value="p">{{ p }}</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Description -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
-          <textarea 
-            v-model="form.description"
-            rows="6"
-            required
-            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white resize-y"
-            placeholder="Please describe your issue in detail..."
-          ></textarea>
-        </div>
-
-        <!-- File Upload -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Attachments</label>
-          <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer relative">
-            <input type="file" multiple class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" @change="handleFileChange" />
-            <div class="space-y-1 text-center">
-              <Upload class="mx-auto h-12 w-12 text-gray-400" />
-              <div class="flex text-sm text-gray-600 dark:text-gray-400">
-                <span class="font-medium text-blue-600 hover:text-blue-500">Upload a file</span>
-                <p class="pl-1">or drag and drop</p>
-              </div>
-              <p class="text-xs text-gray-500">PNG, JPG, PDF up to 10MB</p>
-            </div>
-          </div>
-          
-          <!-- File List -->
-          <div v-if="form.files.length > 0" class="mt-4 space-y-2">
-            <div v-for="(file, index) in form.files" :key="index" class="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-              <span class="text-sm text-gray-700 dark:text-gray-300 truncate">{{ file.name }}</span>
-              <button type="button" @click="removeFile(index)" class="text-gray-400 hover:text-red-500">
-                <X class="w-4 h-4" />
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
+          <!-- Prioridade -->
+          <div class="space-y-4">
+            <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Urgência</label>
+            <div class="flex flex-col gap-2">
+              <button 
+                v-for="p in priorities" 
+                :key="p.value"
+                type="button"
+                @click="form.priority = p.value"
+                class="px-4 py-2 rounded-xl text-[10px] font-black border transition-all tracking-widest text-left"
+                :class="[
+                  form.priority === p.value 
+                    ? 'border-black bg-black text-white dark:border-white dark:bg-white dark:text-black' 
+                    : 'border-transparent bg-gray-50 dark:bg-white/5 text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10'
+                ]"
+              >
+                {{ p.label }}
               </button>
             </div>
           </div>
-        </div>
 
-        <!-- Actions -->
-        <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
-          <Button variant="ghost" @click="$router.back()">Cancel</Button>
-          <Button type="submit" variant="primary" :is-loading="isLoading">Submit Order</Button>
-        </div>
-      </form>
-    </div>
+          <!-- Descrição -->
+          <div class="md:col-span-2 space-y-4">
+            <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Detalhes</label>
+            <textarea 
+              v-model="form.description"
+              rows="6"
+              required
+              class="w-full p-6 bg-gray-50 dark:bg-white/5 border-none rounded-2xl focus:outline-none focus:ring-1 focus:ring-gray-200 dark:focus:ring-white/10 transition-all resize-none text-sm leading-relaxed dark:text-white placeholder:text-gray-300 dark:placeholder:text-gray-800"
+              placeholder="Descreva o ocorrido..."
+            ></textarea>
+          </div>
+      </div>
+
+      <!-- Ação -->
+      <div class="pt-8 border-t border-gray-100 dark:border-white/5 flex justify-end">
+        <Button 
+          type="submit" 
+          class="rounded-xl px-12 py-3 bg-black dark:bg-white text-white dark:text-black font-black text-xs uppercase tracking-widest hover:opacity-90 transition-all"
+          :is-loading="isLoading"
+        >
+          {{ isLoading ? 'Enviando...' : 'Registrar Chamado' }}
+        </Button>
+      </div>
+    </form>
   </div>
 </template>
+
+
+
+

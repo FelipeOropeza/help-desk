@@ -1,121 +1,114 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { Plus, Search, Filter } from 'lucide-vue-next'
-import Button from '../../components/common/Button.vue'
+import { ref, onMounted, computed } from 'vue'
+import { Plus, Search, Filter, ArrowRight } from 'lucide-vue-next'
 import BadgeStatus from '../../components/common/BadgeStatus.vue'
+import Button from '../../components/common/Button.vue'
 
-const tickets = ref([
-  { id: 1, code: 'ORD-7829', title: 'License upgrade request', status: 'open', priority: 'high', category: 'Billing', date: '2023-10-25' },
-  { id: 2, code: 'ORD-7828', title: 'System downtime report', status: 'pending', priority: 'critical', category: 'Technical', date: '2023-10-24' },
-  { id: 3, code: 'ORD-7827', title: 'New user onboarding', status: 'closed', priority: 'low', category: 'Access', date: '2023-10-23' },
-  { id: 4, code: 'ORD-7826', title: 'Billing question', status: 'open', priority: 'medium', category: 'Billing', date: '2023-10-22' },
-  { id: 5, code: 'ORD-7825', title: 'Feature request: Dark mode', status: 'closed', priority: 'low', category: 'Product', date: '2023-10-20' },
-])
-
+const tickets = ref<any[]>([])
+const isLoading = ref(true)
 const searchQuery = ref('')
-const statusFilter = ref('all')
+const filterStatus = ref('all')
+
+const fetchTickets = async () => {
+  isLoading.value = true
+  try {
+    const response = await fetch('http://localhost:3001/api/tickets')
+    const data = await response.json()
+    tickets.value = Array.isArray(data) ? data : []
+  } catch (error) {
+    console.error('Erro ao buscar tickets:', error)
+    tickets.value = []
+  } finally {
+    isLoading.value = false
+  }
+}
 
 const filteredTickets = computed(() => {
   return tickets.value.filter(ticket => {
-    const matchesSearch = ticket.title.toLowerCase().includes(searchQuery.value.toLowerCase()) || 
-                          ticket.code.toLowerCase().includes(searchQuery.value.toLowerCase())
-    const matchesStatus = statusFilter.value === 'all' || ticket.status === statusFilter.value
+    const matchesSearch = ticket.title.toLowerCase().includes(searchQuery.value.toLowerCase())
+    const matchesStatus = filterStatus.value === 'all' || ticket.status === filterStatus.value
     return matchesSearch && matchesStatus
   })
 })
+
+onMounted(fetchTickets)
 </script>
 
 <template>
-  <div class="space-y-6">
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">My Orders</h1>
-      <Button variant="primary" @click="$router.push('/tickets/new')">
+  <div class="max-w-7xl mx-auto space-y-12 animate-in fade-in duration-700">
+    <!-- Header Simples -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-8 px-1">
+      <div class="space-y-1">
+        <h1 class="text-3xl font-black tracking-tighter text-gray-900 dark:text-white">Central de Chamados</h1>
+        <p class="text-gray-400 text-sm">Gerenciamento e histórico de solicitações.</p>
+      </div>
+      <Button variant="primary" @click="$router.push('/tickets/new')" class="rounded-xl px-6 py-2.5 bg-black dark:bg-white text-white dark:text-black hover:opacity-90 text-[11px] font-black tracking-widest uppercase shadow-none">
         <Plus class="w-4 h-4 mr-2" />
-        New Order
+        Novo Chamado
       </Button>
     </div>
 
-    <!-- Filters -->
-    <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row gap-4 justify-between">
-      <div class="relative flex-1 max-w-md">
-        <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+    <!-- Filtros Minimalistas -->
+    <div class="flex flex-col sm:flex-row gap-6 items-center border-b border-gray-100 dark:border-white/5 pb-6">
+      <div class="relative flex-1 group w-full">
+        <Search class="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300 group-focus-within:text-black dark:group-focus-within:text-white transition-colors" />
         <input 
           v-model="searchQuery"
           type="text" 
-          placeholder="Search orders..." 
-          class="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-        >
+          placeholder="Pesquisar por título..." 
+          class="w-full bg-transparent border-none pl-8 py-2 text-base focus:ring-0 placeholder:text-gray-300 dark:text-white font-medium"
+        />
       </div>
-      <div class="flex items-center gap-2">
-        <Filter class="w-4 h-4 text-gray-500" />
-        <select 
-          v-model="statusFilter"
-          class="border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="all">All Status</option>
-          <option value="open">Open</option>
-          <option value="pending">Pending</option>
-          <option value="closed">Closed</option>
+      <div class="flex items-center gap-3">
+        <Filter class="w-4 h-4 text-gray-300" />
+        <select v-model="filterStatus" class="bg-transparent border-none text-[9px] font-black text-gray-400 focus:ring-0 cursor-pointer uppercase tracking-[0.2em]">
+          <option value="all">Filtro de Status</option>
+          <option value="open">Abertos</option>
+          <option value="in_progress">Em Curso</option>
+          <option value="closed">Finalizados</option>
         </select>
       </div>
     </div>
 
-    <!-- Ticket List -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-      <div class="overflow-x-auto">
-        <table class="w-full text-left">
-          <thead>
-            <tr class="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700">
-              <th class="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Order ID</th>
-              <th class="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Subject</th>
-              <th class="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Category</th>
-              <th class="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-              <th class="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
-              <th class="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Action</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-            <tr v-for="ticket in filteredTickets" :key="ticket.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-              <td class="px-6 py-4 whitespace-nowrap">
-                <span class="font-medium text-gray-900 dark:text-white">{{ ticket.code }}</span>
-              </td>
-              <td class="px-6 py-4">
-                <p class="text-sm text-gray-900 dark:text-white font-medium">{{ ticket.title }}</p>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <span class="px-2 py-1 text-xs rounded-md bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
-                  {{ ticket.category }}
-                </span>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <BadgeStatus :status="ticket.status" />
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {{ ticket.date }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <Button variant="ghost" size="sm" @click="$router.push(`/tickets/${ticket.id}`)">
-                  View
-                </Button>
-              </td>
-            </tr>
-            <tr v-if="filteredTickets.length === 0">
-              <td colspan="6" class="px-6 py-12 text-center text-gray-500">
-                No orders found matching your criteria.
-              </td>
-            </tr>
-          </tbody>
-        </table>
+    <!-- Lista -->
+    <div class="space-y-0 relative overflow-hidden">
+      <div v-if="isLoading" class="py-32 text-center">
+        <div class="animate-spin w-6 h-6 border-2 border-black dark:border-white border-b-transparent rounded-full mx-auto"></div>
       </div>
       
-      <!-- Pagination (Mock) -->
-      <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
-        <p class="text-sm text-gray-500">Showing <span class="font-medium">1</span> to <span class="font-medium">{{ filteredTickets.length }}</span> of <span class="font-medium">{{ filteredTickets.length }}</span> results</p>
-        <div class="flex gap-2">
-          <Button variant="secondary" size="sm" disabled>Previous</Button>
-          <Button variant="secondary" size="sm" disabled>Next</Button>
+      <div v-else-if="filteredTickets.length > 0" class="divide-y divide-gray-50 dark:divide-white/5">
+        <div 
+          v-for="ticket in filteredTickets" 
+          :key="ticket.id" 
+          @click="$router.push(`/tickets/${ticket.id}`)"
+          class="group py-5 flex items-center justify-between cursor-pointer hover:bg-gray-50/50 dark:hover:bg-white/[0.02] px-4 -mx-4 rounded-xl transition-all"
+        >
+          <div class="flex items-center gap-10">
+            <span class="text-[10px] font-mono font-bold text-gray-300 w-12 tracking-tighter">#{{ ticket.id.toString().padStart(4, '0') }}</span>
+            <div class="space-y-0.5">
+                <h3 class="text-base font-bold text-gray-800 dark:text-gray-200 group-hover:text-black dark:group-hover:text-white transition-colors tracking-tight">{{ ticket.title }}</h3>
+                <div class="flex items-center gap-3 text-[10px] text-gray-400 font-bold uppercase tracking-widest opacity-60">
+                    <span>{{ ticket.user_name || 'Felipe' }}</span>
+                    <span class="w-1 h-1 rounded-full bg-gray-200"></span>
+                    <span>{{ new Date(ticket.created_at).toLocaleDateString('pt-BR') }}</span>
+                </div>
+            </div>
+          </div>
+          
+          <div class="flex items-center gap-10">
+            <BadgeStatus :status="ticket.status" class="scale-90" />
+            <ArrowRight class="w-4 h-4 text-gray-200 group-hover:text-black dark:group-hover:text-white group-hover:translate-x-1 transition-all" />
+          </div>
         </div>
+      </div>
+
+      <div v-else class="py-48 text-center space-y-4">
+        <div class="text-gray-50 dark:text-white/[0.02] font-black text-8xl select-none">Vazio</div>
+        <p class="text-gray-400 text-sm">Nenhum chamado encontrado.</p>
+        <Button variant="ghost" size="sm" @click="searchQuery = ''; filterStatus = 'all'">Resetar filtros</Button>
       </div>
     </div>
   </div>
 </template>
+
+

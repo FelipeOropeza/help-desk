@@ -42,7 +42,7 @@ const router = createRouter({
             path: 'tickets/:id',
             name: 'tickets-detail',
             component: () => import('../pages/tickets/TicketDetail.vue')
-          },
+          }
       ]
     }
   ]
